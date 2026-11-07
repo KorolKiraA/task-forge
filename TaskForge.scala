@@ -28,7 +28,7 @@ object TaskForge:
     def overdue: Boolean = !done && LocalDateTime.now.isAfter(deadline)
 
   // Очередь: сначала по весу приоритета, затем FIFO по id
-  given Ordering[Ticket] = Ordering.by(t => (t.priority.weight, t.id)).reverse
+  given Ordering[Ticket] = Ordering.by[Ticket, (Int, Int)](t => (t.priority.weight, t.id)).reverse
 
   val queue = mutable.PriorityQueue.empty[Ticket]
   val resolved = mutable.ListBuffer.empty[Ticket]
@@ -92,9 +92,9 @@ object TaskForge:
     val rest = queue.clone().dequeueAll
     val (hit, miss) = rest.partition(_.id == id)
     hit.headOption match
-      case Some(t) => queue.enqueue(miss :+ t.copy(assignee = Some(who)): _*)
+      case Some(t) => queue.enqueue(miss :+ t.copy(assignee = Some(who))*)
                       println(s"#$id назначена на $who")
-      case None    => queue.enqueue(miss: _*); println("Заявка не найдена.")
+      case None    => queue.enqueue(miss*); println("Заявка не найдена.")
 
   def complete(): Unit =
     print("ID заявки: "); val id = StdIn.readLine().trim.toInt
@@ -103,10 +103,10 @@ object TaskForge:
     hit.headOption match
       case Some(t) =>
         resolved += t.copy(done = true)
-        queue.enqueue(miss: _*)
+        queue.enqueue(miss*)
         val slaOk = !LocalDateTime.now.isAfter(t.deadline)
         println(s"#$id закрыта. SLA ${if slaOk then "выполнен ✔" else "НАРУШЕН ✘"}")
-      case None => queue.enqueue(miss: _*); println("Заявка не найдена.")
+      case None => queue.enqueue(miss*); println("Заявка не найдена.")
 
   def showQueue(): Unit =
     if queue.isEmpty then println("Очередь пуста.")
